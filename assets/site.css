@@ -515,3 +515,65 @@ html[data-theme="night"] .Folded::after { background: linear-gradient(rgba(21,20
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   动效层
+   原则：只动 transform / opacity；统一曲线与时长；尊重减弱动效偏好。
+   ============================================================ */
+
+/* 阅读进度线（顶栏底部一条极细墨线） */
+.Progress {
+  position: fixed; left: 0; right: 0; top: 0; height: 2px; z-index: 70;
+  background: var(--accent);
+  transform: scaleX(0); transform-origin: 0 50%;
+  opacity: 0;
+  transition: opacity var(--d2) var(--ease);
+  will-change: transform;
+}
+.Progress.is-on { opacity: .8; }
+
+/* 题名 hover：下划线自左展开 */
+.Entry-title a, .Shelf-name a, .Pick-name a {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-size: 0% 1px; background-position: 0 94%; background-repeat: no-repeat;
+  transition: background-size var(--d3) var(--ease), color var(--d1) var(--ease);
+}
+.Entry-title a:hover, .Shelf-name a:hover, .Pick-name a:hover { background-size: 100% 1px; }
+
+/* 栏目标题：横线自左生长 */
+.SectionHead { position: relative; }
+.SectionHead::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px;
+  background: var(--ink); transform: scaleX(0); transform-origin: 0 50%;
+  animation: headIn var(--d3) var(--ease) 80ms both;
+}
+@keyframes headIn { to { transform: scaleX(1); } }
+
+/* 目录激活标记：由中心展开 */
+.Nav-item[aria-current="true"]::before { animation: markIn 360ms var(--ease); }
+@keyframes markIn {
+  from { transform: translateY(-50%) scaleY(.15); opacity: 0; }
+  to   { transform: translateY(-50%) scaleY(1); opacity: 1; }
+}
+
+/* 条目逐条浮现 */
+.Rise { animation: rise 520ms var(--ease) both; animation-delay: calc(var(--i, 0) * 44ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(11px); } to { opacity: 1; transform: none; } }
+
+/* 图片载入淡入，避免突然弹出 */
+.Copy img, .Rail-avatar, .Shelf-item img { opacity: 0; transition: opacity 480ms var(--ease); }
+.Copy img.is-in, .Rail-avatar.is-in, .Shelf-item img.is-in { opacity: 1; }
+
+/* 主题切换时的表面过渡（避免只有底色在变） */
+.Topbar, .Rail, .Entry, .Excerpt, .Pick, .Foot, .Colophon, .Quiet, .Skeleton,
+.Rail-avatar, .Rail-metrics, .SectionHead, .ToTop, .More {
+  transition: background-color var(--d2) var(--ease),
+              border-color var(--d2) var(--ease),
+              color var(--d2) var(--ease);
+}
+.Foot, .Colophon { transition-duration: var(--d3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .Rise, .SectionHead::before, .Nav-item[aria-current="true"]::before { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .Copy img, .Rail-avatar, .Shelf-item img { opacity: 1 !important; }
+}

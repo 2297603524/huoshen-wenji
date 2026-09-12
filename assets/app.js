@@ -126,9 +126,9 @@
     }
 
     h += '<div class="Rail-metrics">' +
-      '<div class="Rail-metric"><b>' + wan(p.followerCount) + '</b><span>读者</span></div>' +
-      '<div class="Rail-metric"><b>' + num(p.followingCount) + '</b><span>订阅</span></div>' +
-      '<div class="Rail-metric"><b>' + num(p.voteupCount) + '</b><span>累计获赞</span></div>' +
+      '<div class="Rail-metric"><b>' + num(p.followingCount) + '</b><span>关注了</span></div>' +
+      '<div class="Rail-metric"><b>' + wan(p.followerCount) + '</b><span>关注者</span></div>' +
+      '<div class="Rail-metric"><b>' + num(p.voteupCount) + '</b><span>获得赞同</span></div>' +
       '</div>';
 
     h += '<nav class="Nav" aria-label="栏目"><div class="Nav-title">目录</div>';
@@ -240,6 +240,25 @@
     return n;
   }
 
+  /* ---------------- 动效 ---------------- */
+  function appendAll(box, nodes, cap) {
+    cap = cap || 9;
+    nodes.forEach(function (n, i) {
+      n.style.setProperty('--i', Math.min(i, cap));
+      n.classList.add('Rise');
+      box.appendChild(n);
+    });
+  }
+  function fadeImages(root) {
+    (root || document).querySelectorAll('.Copy img, .Rail-avatar, .Shelf-item img').forEach(function (im) {
+      if (im.dataset.in) return;
+      im.dataset.in = '1';
+      var done = function () { im.classList.add('is-in'); };
+      if (im.complete) done();
+      else { im.addEventListener('load', done); im.addEventListener('error', done); }
+    });
+  }
+
   /* ---------------- 状态块 ---------------- */
   function skeleton() {
     var f = document.createDocumentFragment();
@@ -278,7 +297,7 @@
     var box = panel(tab);
     var meta = state.meta;
     if (!append) { box.innerHTML = ''; box.appendChild(skeleton()); }
-    var ok = function () { box.classList.add('Fade'); };
+    var ok = function () { box.classList.add('Fade'); fadeImages(box); };
     var bad = function (e) {
       box.innerHTML = '';
       box.appendChild(quiet('err', '内容未能载入', esc(e && e.message ? e.message : '请稍后重试')));
@@ -289,7 +308,7 @@
         box.innerHTML = '';
         box.appendChild(sectionHead('提问', list.length + ' 条'));
         if (!list.length) return box.appendChild(quiet('', '暂无内容', ''));
-        list.forEach(function (it, i) { box.appendChild(itemQuestions(it, i + 1)); });
+        appendAll(box, list.map(function (it, i) { return itemQuestions(it, i + 1); }));
         ok();
       }).catch(bad);
     }
@@ -298,9 +317,9 @@
       return get(DATA + 'favlists.json').then(function (list) {
         box.innerHTML = '';
         var total = list.reduce(function (s, x) { return s + (x.itemCount || 0); }, 0);
-        box.appendChild(sectionHead('集萃', list.length + ' 个分类 · ' + num(total) + ' 条', '进入分类查看条目'));
+        box.appendChild(sectionHead('收藏', list.length + ' 个分类 · ' + num(total) + ' 条', '进入分类查看条目'));
         var g = el('div', 'Shelf');
-        list.forEach(function (it) { g.appendChild(itemShelf(it)); });
+        appendAll(g, list.map(function (it) { return itemShelf(it); }));
         box.appendChild(g);
         ok();
       }).catch(bad);
@@ -308,13 +327,13 @@
 
     if (tab === 'columns' || tab === 'following') {
       var file = tab === 'columns' ? 'columns.json' : 'following.json';
-      var title = tab === 'columns' ? '文丛' : '订阅';
+      var title = tab === 'columns' ? '专栏' : '关注订阅';
       return get(DATA + file).then(function (list) {
         box.innerHTML = '';
         box.appendChild(sectionHead(title, list.length + ' 个'));
         if (!list.length) return box.appendChild(quiet('', '暂无内容', ''));
         var g = el('div', 'Shelf');
-        list.forEach(function (it) { g.appendChild(itemColumn(it)); });
+        appendAll(g, list.map(function (it) { return itemColumn(it); }));
         box.appendChild(g);
         ok();
       }).catch(bad);
@@ -323,9 +342,9 @@
     if (tab === 'highlights') {
       return get(DATA + 'highlights.json').then(function (list) {
         box.innerHTML = '';
-        box.appendChild(sectionHead('摘录', list.length + ' 条'));
+        box.appendChild(sectionHead('划线', list.length + ' 条'));
         if (!list.length) return box.appendChild(quiet('', '暂无内容', ''));
-        list.forEach(function (it, i) { box.appendChild(itemExcerpt(it, i + 1)); });
+        appendAll(box, list.map(function (it, i) { return itemExcerpt(it, i + 1); }));
         ok();
       }).catch(bad);
     }
@@ -335,7 +354,7 @@
     var pages = (meta.pageCounts || {})[tab] || 0;
     if (state.pages[tab] == null) state.pages[tab] = -1;
     var next = state.pages[tab] + 1;
-    var label = { answers: '随想', articles: '长文', pins: '片段' }[tab];
+    var label = { answers: '回答', articles: '文章', pins: '想法' }[tab];
 
     if (next >= pages) {
       if (!append) {
@@ -356,9 +375,9 @@
       }
       var make = tab === 'answers' ? itemAnswers : (tab === 'articles' ? itemArticles : itemPins);
       var frag = document.createDocumentFragment();
-      (data.items || []).forEach(function (it, i) {
-        frag.appendChild(make(it, next * size + i + 1));
-      });
+      appendAll(frag, (data.items || []).map(function (it, i) {
+        return make(it, next * size + i + 1);
+      }));
       box.appendChild(frag);
       state.pages[tab] = next;
       more(box, tab, state.pages[tab] + 1 >= pages);
@@ -407,7 +426,7 @@
     requestAnimationFrame(function () { window.scrollTo(0, y); });
   }
 
-  /* ---------------- 集萃详情 ---------------- */
+  /* ---------------- 收藏分类详情 ---------------- */
   function openShelf(id, title) {
     var box = panel('favlists');
     box.innerHTML = '';
@@ -422,6 +441,7 @@
       box.appendChild(back);
       box.appendChild(sectionHead(title, list.length + ' 条'));
       if (!list.length) return box.appendChild(quiet('', '这个分类下暂无条目', ''));
+      var rows = [];
       list.forEach(function (it) {
         var row = el('article', 'Pick');
         var bits = [];
@@ -435,8 +455,10 @@
           '</h3>' +
           '<div class="Pick-meta">' + bits.join(' · ') + '</div>' +
           (it.excerpt ? '<p class="Pick-text">' + esc(it.excerpt) + '</p>' : '');
-        box.appendChild(row);
+        rows.push(row);
       });
+      appendAll(box, rows);
+      fadeImages(box);
       box.classList.add('Fade');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }).catch(function () {
@@ -493,6 +515,13 @@
         if (tb) tb.classList.toggle('is-stuck', y > 2);
         var tt = $('#toTop');
         if (tt) tt.classList.toggle('is-on', y > 700);
+        var pr = $('#progress');
+        if (pr) {
+          var max = document.documentElement.scrollHeight - window.innerHeight;
+          var r = max > 60 ? Math.min(1, y / max) : 0;
+          pr.style.transform = 'scaleX(' + r + ')';
+          pr.classList.toggle('is-on', r > 0.004);
+        }
         tick = false;
       });
     }, { passive: true });
@@ -535,12 +564,17 @@
       var a = meta.archived;
       var foot = el('footer', 'Foot');
       foot.innerHTML =
-        '<p>本站收录「' + esc(p.name) + '」的公开文字：随想 ' + num(a.answers) + ' 条、长文 ' + num(a.articles) +
-        ' 篇、片段 ' + num(a.pins) + ' 条、提问 ' + num(a.questions) + ' 条、集萃 ' + num(a.favlists) +
-        ' 个分类（' + num(a.favItems) + ' 条）、文丛 ' + num(a.columns) + ' 个、订阅 ' + num(a.following) +
-        ' 个、摘录 ' + num(a.highlights) + ' 条。</p>' +
+        '<p>本站收录「' + esc(p.name) + '」的公开文字：回答 ' + num(a.answers) + ' 条、文章 ' + num(a.articles) +
+        ' 篇、想法 ' + num(a.pins) + ' 条、提问 ' + num(a.questions) + ' 条、收藏 ' + num(a.favlists) +
+        ' 个分类（' + num(a.favItems) + ' 条）、专栏 ' + num(a.columns) + ' 个、关注订阅 ' + num(a.following) +
+        ' 个、划线 ' + num(a.highlights) + ' 条。</p>' +
         '<p>内容版权归原作者所有，仅作个人阅读存档，不作商业用途。整理于 ' + esc(meta.fetchedAt || '') + '。</p>';
       document.body.appendChild(foot);
+
+      var pr = el('div', 'Progress');
+      pr.id = 'progress';
+      pr.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(pr);
 
       var up = el('button', 'ToTop', I.up);
       up.id = 'toTop';
@@ -555,6 +589,7 @@
       state.built[state.tab] = true;
       render(state.tab, false);
       syncPanels();
+      fadeImages(document);
       window.dispatchEvent(new Event('scroll'));
     }).catch(function (e) {
       document.body.innerHTML = '<div style="max-width:560px;margin:80px auto;padding:0 24px">' +
