@@ -7,6 +7,7 @@
   'use strict';
 
   var DATA = 'data/';
+  var SLUG = '';
   var PAGE = { answers: 20, articles: 10, pins: 10 };
   var state = { tab: 'answers', meta: null, built: {}, pages: {}, scroll: {} };
 
@@ -94,6 +95,7 @@
     n.id = 'topbar';
     n.innerHTML =
       '<div class="Topbar-inner">' +
+      '<a class="Crumb" href="index.html">← 名录</a>' +
       '<a class="Brand" href="#" aria-label="回到顶部">' +
       '<span class="Brand-dot" aria-hidden="true"></span>' + esc(p.name) +
       '<span class="Brand-sub">文集</span></a>' +
@@ -541,7 +543,24 @@
     applyTheme(theme);
     applySize(SIZES.indexOf(read('wj-size', 'm')) >= 0 ? read('wj-size', 'm') : 'm');
 
-    get(DATA + 'profile.json').then(function (meta) {
+    var want = '';
+    try { want = (new URLSearchParams(location.search).get('u') || '').trim(); } catch (e) { want = ''; }
+
+    get('data/people.json').then(function (index) {
+      var list = (index && index.people) || [];
+      var person = null;
+      if (want) {
+        person = list.filter(function (x) { return x.slug === want; })[0] || null;
+      }
+      if (!person && list.length) person = list[0];
+      if (!person) throw new Error('名录为空，data/people.json 里还没有作者');
+      SLUG = person.slug;
+      DATA = 'data/' + SLUG + '/';
+      if (!want) {
+        try { history.replaceState(null, '', 'person.html?u=' + encodeURIComponent(SLUG)); } catch (e) { /* ignore */ }
+      }
+      return get(DATA + 'profile.json');
+    }).then(function (meta) {
       state.meta = meta;
       var p = meta.profile;
       if (meta.tabs && meta.tabs.length && !meta.counts[state.tab]) state.tab = meta.tabs[0].key;

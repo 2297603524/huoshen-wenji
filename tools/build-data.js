@@ -3,8 +3,12 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const RAW = path.join(ROOT, 'data', 'raw');
-const OUT = path.join(ROOT, 'data');
+/* 用法：node tools/build-data.js [slug]
+   原始数据 data/raw/<slug>/  →  站点数据 data/<slug>/ */
+const SLUG = (process.argv[2] || 'huoshen').trim();
+const RAW = path.join(ROOT, 'data', 'raw', SLUG);
+const OUT = path.join(ROOT, 'data', SLUG);
+fs.mkdirSync(OUT, { recursive: true });
 
 const readJSON = (f) => JSON.parse(fs.readFileSync(path.join(RAW, f), 'utf8'));
 
@@ -377,9 +381,16 @@ const meta = {
 
 fs.writeFileSync(path.join(OUT, 'profile.json'), JSON.stringify(meta));
 
-console.log('answers', answers.length, 'pages', pageCounts.answers);
-console.log('articles', articles.length, 'pages', pageCounts.articles);
-console.log('pins', pins.length, 'pages', pageCounts.pins);
-console.log('questions', questions.length);
-console.log('favlists', favlists.length, 'favItems', favTotal);
-console.log('columns', columns.length, 'following', following.length, 'highlights', highlights.length);
+console.log('SUMMARY ' + JSON.stringify({
+  slug: SLUG,
+  answers: answers.length,
+  articles: articles.length,
+  pins: pins.length,
+  questions: questions.length,
+  favlists: favlists.length,
+  favItems: favTotal,
+  columns: columns.length,
+  following: following.length,
+  highlights: highlights.length,
+  pageCounts: pageCounts
+}));

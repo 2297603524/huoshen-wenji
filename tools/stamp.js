@@ -1,24 +1,31 @@
-/* 给 index.html 里的静态资源加内容指纹版本号，
-   避免 CDN/浏览器把旧的 app.js、site.css 拿来配上新的 HTML。 */
+/* 给页面里的静态资源加内容指纹版本号，
+   避免 CDN / 浏览器把旧的 js、css 拿来配上新的 HTML。
+   用法：node tools/stamp.js */
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
-const hash = (f) => crypto.createHash('md5')
+const ASSETS = ['assets/site.css', 'assets/app.js', 'assets/portal.js'];
+const PAGES = ['index.html', 'person.html'];
+
+const md5 = (f) => crypto.createHash('md5')
   .update(fs.readFileSync(path.join(ROOT, f)))
   .digest('hex').slice(0, 8);
 
-const js = hash('assets/app.js');
-const css = hash('assets/site.css');
+const stamp = {};
+ASSETS.forEach((a) => { stamp[a] = md5(a); });
+Object.keys(stamp).forEach((a) => console.log(a.padEnd(20) + ' -> ' + stamp[a]));
 
-const p = path.join(ROOT, 'index.html');
-let html = fs.readFileSync(p, 'utf8');
-const before = html;
-html = html.replace(/assets\/app\.js(\?v=[^"']*)?/g, 'assets/app.js?v=' + js);
-html = html.replace(/assets\/site\.css(\?v=[^"']*)?/g, 'assets/site.css?v=' + css);
-if (html !== before) fs.writeFileSync(p, html);
-
-console.log('app.js  ->', js);
-console.log('site.css->', css);
-console.log(html === before ? '(未变化)' : 'index.html 已更新');
+PAGES.forEach((page) => {
+  const p = path.join(ROOT, page);
+  if (!fs.existsSync(p)) return;
+  let html = fs.readFileSync(p, 'utf8');
+  const before = html;
+  ASSETS.forEach((a) => {
+    const re = new RegExp(a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\?v=[^"\']*)?', 'g');
+    html = html.replace(re, a + '?v=' + stamp[a]);
+  });
+  if (html !== before) fs.writeFileSync(p, html);
+  console.log((html === before ? '(未变化) ' : '已更新   ') + page);
+});

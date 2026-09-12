@@ -5,16 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="火神八号的文字作品存档：随想、长文、片段、提问、集萃、文丛、摘录。">
-<title>火神八号 · 文集</title>
+<meta name="description" content="文集名录 —— 收录作者的文字作品存档，点击进入个人文集。">
+<title>文集 · 名录</title>
 <link rel="preconnect" href="https://picx.zhimg.com" crossorigin>
 <link rel="preconnect" href="https://pic1.zhimg.com" crossorigin>
 <link rel="preconnect" href="https://pica.zhimg.com" crossorigin>
 <link rel="preconnect" href="https://pic4.zhimg.com" crossorigin>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231f6f5c'/><text x='16' y='23' font-size='19' font-family='Songti SC,serif' font-weight='600' fill='%23faf8f4' text-anchor='middle'>文</text></svg>">
-<link rel="stylesheet" href="assets/site.css?v=b0aed432">
+<link rel="stylesheet" href="assets/site.css?v=2be3f9d1">
 <script>
-  /* 首屏前定好主题与字号，避免闪变 */
   (function () {
     var h = document.documentElement;
     try {
@@ -33,31 +32,44 @@
 </script>
 </head>
 <body>
-<a class="SkipLink" href="#panels">跳到正文</a>
+<a class="SkipLink" href="#roster">跳到名录</a>
 
-<div class="Body" id="body">
-  <aside class="Rail" aria-hidden="true">
-    <div class="Rail-headline">正在展开…</div>
-  </aside>
-  <main class="Main">
-    <div id="panels">
-      <div>
-        <div class="Skeleton"><div class="Sk t"></div><div class="Sk"></div><div class="Sk"></div><div class="Sk"></div></div>
-        <div class="Skeleton"><div class="Sk t"></div><div class="Sk"></div><div class="Sk"></div><div class="Sk"></div></div>
-      </div>
+<header class="Topbar" id="topbar">
+  <div class="Topbar-inner">
+    <a class="Brand" href="#" aria-label="回到顶部">
+      <span class="Brand-dot" aria-hidden="true"></span>文集
+      <span class="Brand-sub">名录</span>
+    </a>
+    <span class="Topbar-sp"></span>
+    <div class="Topbar-tools">
+      <button class="Tool" id="themeBtn" type="button"></button>
     </div>
+  </div>
+</header>
+
+<div class="Body Body--plain" id="body">
+  <main class="Main Main--wide">
+    <div class="SectionHead">
+      <h2>名录</h2>
+      <span class="n" id="rosterCount"></span>
+      <span class="sp"></span>
+      <span class="hint">点击进入</span>
+    </div>
+    <div id="roster">
+      <div class="Skeleton"><div class="Sk t"></div><div class="Sk"></div><div class="Sk"></div></div>
+    </div>
+    <div id="intro"></div>
   </main>
 </div>
 
+<footer class="Foot" id="foot"></footer>
+
 <noscript>
   <div style="max-width:560px;margin:80px auto;padding:0 24px">
-    <div class="Quiet">
-      <h3>需要启用 JavaScript</h3>
-      <p>本站的内容由脚本读取数据文件后排版呈现，请启用 JavaScript 再刷新。</p>
-    </div>
+    <div class="Quiet"><h3>需要启用 JavaScript</h3><p>名录由脚本读取数据后呈现，请启用 JavaScript 再刷新。</p></div>
   </div>
 </noscript>
 
-<script src="assets/app.js?v=0ffb09fd"></script>
+<script src="assets/portal.js?v=34b794eb"></script>
 </body>
 </html>
