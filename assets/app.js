@@ -134,7 +134,10 @@
       '</div>';
 
     h += '<nav class="Nav" aria-label="栏目"><div class="Nav-title">目录</div>';
-    (meta.tabs || []).forEach(function (t) {
+    // 没有内容的栏目直接不显示，避免目录里出现一串「0」
+    (meta.tabs || []).filter(function (t) {
+      return (meta.counts[t.key] || 0) > 0 || t.key === state.tab;
+    }).forEach(function (t) {
       h += '<button class="Nav-item" type="button" data-tab="' + t.key + '"' +
         (t.key === state.tab ? ' aria-current="true"' : '') + ' id="nav-' + t.key + '">' +
         '<span class="Nav-name">' + esc(t.label) + '</span>' +
@@ -581,12 +584,18 @@
       document.title = p.name + ' · 文集';
 
       var a = meta.archived;
+      var parts = [];
+      if (a.answers) parts.push('回答 ' + num(a.answers) + ' 条');
+      if (a.articles) parts.push('文章 ' + num(a.articles) + ' 篇');
+      if (a.pins) parts.push('想法 ' + num(a.pins) + ' 条');
+      if (a.questions) parts.push('提问 ' + num(a.questions) + ' 条');
+      if (a.favlists) parts.push('收藏 ' + num(a.favlists) + ' 个分类（' + num(a.favItems) + ' 条）');
+      if (a.columns) parts.push('专栏 ' + num(a.columns) + ' 个');
+      if (a.following) parts.push('关注订阅 ' + num(a.following) + ' 个');
+      if (a.highlights) parts.push('划线 ' + num(a.highlights) + ' 条');
       var foot = el('footer', 'Foot');
       foot.innerHTML =
-        '<p>本站收录「' + esc(p.name) + '」的公开文字：回答 ' + num(a.answers) + ' 条、文章 ' + num(a.articles) +
-        ' 篇、想法 ' + num(a.pins) + ' 条、提问 ' + num(a.questions) + ' 条、收藏 ' + num(a.favlists) +
-        ' 个分类（' + num(a.favItems) + ' 条）、专栏 ' + num(a.columns) + ' 个、关注订阅 ' + num(a.following) +
-        ' 个、划线 ' + num(a.highlights) + ' 条。</p>' +
+        '<p>本站收录「' + esc(p.name) + '」的公开文字：' + parts.join('、') + '。</p>' +
         '<p>内容版权归原作者所有，仅作个人阅读存档，不作商业用途。整理于 ' + esc(meta.fetchedAt || '') + '。</p>';
       document.body.appendChild(foot);
 

@@ -12,10 +12,12 @@
     GH_OWNER / GH_REPO / GH_BRANCH / GH_SRC / GH_MSG / GH_TOKEN_FILE
 """
 import base64
+import hashlib
 import json
 import os
 import ssl
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -60,20 +62,40 @@ ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
 
-def api(method, path, body=None):
-    req = urllib.request.Request(API + path, method=method,
-                                 data=json.dumps(body).encode() if body is not None else None)
-    req.add_header("Authorization", "Bearer " + open(TOKEN_FILE, encoding="utf-8").read().strip())
-    req.add_header("Accept", "application/vnd.github+json")
-    req.add_header("User-Agent", "wb-publish")
-    if body is not None:
-        req.add_header("Content-Type", "application/json")
-    try:
-        with urllib.request.urlopen(req, timeout=90, context=ctx) as r:
-            return json.loads(r.read().decode() or "{}")
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode()[:400]
-        raise SystemExit("HTTP %s %s %s\n%s" % (e.code, method, path, detail))
+RETRY_CODES = (400, 408, 409, 429, 500, 502, 503, 504)
+
+
+def api(method, path, body=None, tries=5):
+    """带重试的调用：本机走中间人代理时，连续大请求偶发 400/5xx，重试即可。"""
+    payload = json.dumps(body).encode() if body is not None else None
+    last = ""
+    for attempt in range(tries):
+        req = urllib.request.Request(API + path, method=method, data=payload)
+        req.add_header("Authorization", "Bearer " + open(TOKEN_FILE, encoding="utf-8").read().strip())
+        req.add_header("Accept", "application/vnd.github+json")
+        req.add_header("User-Agent", "wb-publish")
+        if body is not None:
+            req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=180, context=ctx) as r:
+                return json.loads(r.read().decode() or "{}")
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode()[:200]
+            last = "HTTP %s %s %s\n%s" % (e.code, method, path, detail)
+            if e.code not in RETRY_CODES:
+                break
+        except Exception as e:            # 连接被中间人掐断等
+            last = "%s %s %s\n%s" % (type(e).__name__, method, path, e)
+        time.sleep(1.5 * (attempt + 1))
+    raise SystemExit(last)
+
+
+def blob_sha(data):
+    """git blob 的内容寻址 sha，用来判断文件是否变化、能否跳过上传。"""
+    h = hashlib.sha1()
+    h.update(b"blob %d\0" % len(data))
+    h.update(data)
+    return h.hexdigest()
 
 
 def local_files():
@@ -95,9 +117,10 @@ def main():
     ref = api("GET", "/repos/%s/%s/git/ref/heads/%s" % (OWNER, REPO, BRANCH))
     parent = ref["object"]["sha"]
     base_tree = api("GET", "/repos/%s/%s/git/commits/%s" % (OWNER, REPO, parent))["tree"]["sha"]
-    remote = {t["path"] for t in api(
+    remote_map = {t["path"]: t["sha"] for t in api(
         "GET", "/repos/%s/%s/git/trees/%s?recursive=1" % (OWNER, REPO, base_tree))["tree"]
         if t["type"] == "blob"}
+    remote = set(remote_map)
 
     local = {rel for rel, _ in files}
     added = sorted(local - remote)
@@ -120,12 +143,26 @@ def main():
         return
 
     tree = []
-    for rel, full in files:
-        blob = api("POST", "/repos/%s/%s/git/blobs" % (OWNER, REPO), {
-            "content": base64.b64encode(open(full, "rb").read()).decode(),
-            "encoding": "base64",
-        })
-        tree.append({"path": rel, "mode": "100644", "type": "blob", "sha": blob["sha"]})
+    uploaded = skipped = 0
+    total = len(files)
+    for idx, (rel, full) in enumerate(files, 1):
+        data = open(full, "rb").read()
+        sha = blob_sha(data)
+        if remote_map.get(rel) == sha:
+            skipped += 1
+        else:
+            try:
+                sha = api("POST", "/repos/%s/%s/git/blobs" % (OWNER, REPO), {
+                    "content": base64.b64encode(data).decode(),
+                    "encoding": "base64",
+                })["sha"]
+            except SystemExit as e:
+                raise SystemExit("上传失败：%s（%.1f MB）\n%s" % (rel, len(data) / 1048576, e))
+            uploaded += 1
+        tree.append({"path": rel, "mode": "100644", "type": "blob", "sha": sha})
+        if idx % 25 == 0 or idx == total:
+            print("  … %d/%d  （上传 %d / 跳过 %d）" % (idx, total, uploaded, skipped), flush=True)
+    print("\n上传 %d 个，内容未变跳过 %d 个" % (uploaded, skipped))
     for p in removed:
         tree.append({"path": p, "mode": "100644", "type": "blob", "sha": None})
 
